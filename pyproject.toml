@@ -34,7 +34,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --strict-markers"
+addopts = "-v --strict-markers --alluredir=reports/allure-results --clean-alluredir"
 markers = [
     "positive: positive scenario tests",
     "negative: negative scenario tests",
