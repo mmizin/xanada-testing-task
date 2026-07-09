@@ -19,7 +19,7 @@ dependencies = [
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
-    "pytest-allure>=2.13.0",
+    "allure-pytest>=2.13.0",
     "pytest-xdist>=3.8.0",
     "filelock>=3.12.0",
     "black>=23.0.0",
@@ -39,6 +39,7 @@ markers = [
     "negative: negative scenario tests",
     "edge_case: edge case tests",
     "slow: slow running tests",
+    "login: login endpoint tests",
 ]
 
 [tool.coverage.run]
