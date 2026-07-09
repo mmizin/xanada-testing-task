@@ -195,9 +195,13 @@ same caveat as already noted for TC-002/TC-012's exact status codes.
 
 ## TC-004: Repeated valid logins behave consistently
 
-**Tags:** @regression @auth @integration
+**Tags:** @regression @auth
 **Technique:** Use Case Testing (repetition) — FR-1.4, FR-4.1
 **Isolation:** session-state
+**Location:** `tests/authentication/behavior/` — single-endpoint (two
+sequential logins to the same session resource), not `integration/`: the
+`integration` pytest marker is defined as cross-endpoint (see TC-003), which
+this isn't. Dropped from the tag list above for the same reason.
 
 **Pre-conditions:**
 - Valid credentials available; rate budget allows two sequential logins.

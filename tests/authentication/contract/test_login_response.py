@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import allure
 import pytest
-from pydantic import ValidationError
 
 from src.features.authentication.api.authentication_client import AuthenticationApiClient
 from src.features.authentication.models.login_response import LoginResponse
@@ -37,7 +36,6 @@ def test_login_response_matches_documented_schema(
     with allure.step(
         "Assert the body has exactly the documented fields, correctly typed"
     ):
-        try:
-            LoginResponse.model_validate(response.data)
-        except ValidationError as exc:
-            pytest.fail(f"response body does not match the documented contract:\n{exc}")
+        # An unhandled ValidationError already fails the test with pydantic's
+        # own diagnostics (which field/type didn't match) — no need to re-wrap it.
+        LoginResponse.model_validate(response.data)
