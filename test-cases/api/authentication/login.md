@@ -384,14 +384,31 @@ an unexpected lenient path cannot touch the real account).
 **Technique:** Error Guessing (method misuse) — FR-2.5
 **Isolation:** stateless
 
-**Request variants:** GET, PUT, PATCH on `/bpapi/rest/security/session` with no
+**Request variants:** PUT, PATCH on `/bpapi/rest/security/session` with no
 credentials in the payload. (DELETE is excluded: on this API, DELETE on the
-session resource is the documented *logout* operation, not an invalid method.)
+session resource is the documented *logout* operation, not an invalid method.
+GET is excluded too: it's the documented session-status check, already
+exercised unauthenticated as TC-003's control assertion — re-running it here
+would duplicate that check rather than test method support.)
 
-**Expected Response:**
-- **Status Code:** 4xx per variant (expected 405; documented value recorded after
-  first run) — never 5xx.
+**Expected Response (unauthenticated):**
+- **Status Code:** `401` — confirmed against the live API. This means the API
+  checks authentication *before* it checks method support: a credential-less
+  PUT/PATCH gets the same 401 as a credential-less GET, not the originally
+  guessed `405`. So the unauthenticated variant alone doesn't prove PUT/PATCH
+  are unsupported methods — only that unauthenticated requests are rejected
+  regardless of method.
 - **Assertions:** no session created; response does not expose an internal error.
+
+**Follow-up — authenticated PUT/PATCH, isolating method support from auth
+state:**
+
+- **Pre-conditions:** a valid session token from a successful login.
+- **Request:** PUT, PATCH on the same URL, this time with a valid
+  `session-token`.
+- **Expected Response:** `405` — with authentication no longer the reason for
+  rejection, this isolates "method not supported" as its own confirmed fact
+  rather than inferring it from the unauthenticated case.
 
 ----
 
