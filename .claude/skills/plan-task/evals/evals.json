@@ -1,0 +1,23 @@
+{
+  "skill_name": "plan-task",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We need to add a new test feature for the booking flow. Users should be able to test different booking scenarios — same-day bookings, advance bookings, edge cases with availability. We want fixtures that create test users and mock accommodation data. How should we structure this?",
+      "expected_output": "User enters discovery mode, skill asks about requirements (what booking scenarios matter most, integration with existing fixtures, test data needs), creates a plan with files to modify/create (new test feature, fixtures, test data files), gets approval before implementation",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Fix the API client timeout issue — requests to staging are timing out after 30 seconds. We need to make the timeout configurable per environment and add exponential backoff retry logic.",
+      "expected_output": "Skill assesses complexity (medium task, affects API infrastructure), goes through discovery for timeout config options and retry strategy, creates plan for API client changes, validates with user before implementation",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Add a debug print statement to show API response headers in test output",
+      "expected_output": "Skill identifies this as trivial (single file, <10 lines, no behavior change), asks user if they want to skip planning, proceeds directly to implementation after confirmation",
+      "files": []
+    }
+  ]
+}
