@@ -21,6 +21,7 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-allure>=2.13.0",
     "pytest-xdist>=3.8.0",
+    "filelock>=3.12.0",
     "black>=23.0.0",
     "isort>=5.12.0",
     "flake8>=6.0.0",
