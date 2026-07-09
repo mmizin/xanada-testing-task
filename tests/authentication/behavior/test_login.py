@@ -8,7 +8,7 @@ from __future__ import annotations
 import allure
 import pytest
 
-from src.features.authentication.api.login_client import LoginApiClient
+from src.features.authentication.api.authentication_client import AuthenticationApiClient
 from src.features.authentication.utils.session import extract_session_token
 from src.infra.config import Settings
 
@@ -23,18 +23,22 @@ from src.infra.config import Settings
 @allure.tag("smoke", "critical", "contract", "auth")
 @pytest.mark.positive
 @pytest.mark.login
-def test_login_with_valid_credentials(settings: Settings, login_client: LoginApiClient) -> None:
+def test_login_with_valid_credentials(settings: Settings, auth_client: AuthenticationApiClient) -> None:
     with allure.step("Log in with the configured real account credentials"):
-        response = login_client.login(settings.username, settings.password)
+        response = auth_client.login(settings.username, settings.password)
         allure.attach(str(response), name="Response", attachment_type=allure.attachment_type.TEXT)
 
     with allure.step("Assert 200 OK"):
-        assert response.status_code == 200
+        assert response.status_code == 200, f"expected 200, got {response.status_code}: {response.raw.text}"
 
     with allure.step("Assert a non-empty session token is issued"):
         token = extract_session_token(response)
-        assert token, "expected a non-empty session-token in the response body"
+        assert token, f"expected a non-empty session-token in the response body: {response.raw.text}"
 
     with allure.step("Assert the password is never echoed back"):
-        assert settings.password not in response.raw.text
-        assert settings.password not in "".join(response.raw.headers.values())
+        assert (
+            settings.password not in response.raw.text
+        ), f"password leaked in response body: {response.raw.text}"
+        assert settings.password not in "".join(
+            response.raw.headers.values()
+        ), f"password leaked in response headers: {dict(response.raw.headers)}"

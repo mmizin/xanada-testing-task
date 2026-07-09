@@ -16,7 +16,7 @@ configuration-supplied credentials.
 |---|---|---|---|
 | TC-001 Login with valid credentials returns 200 and a session token | AUTOMATE_API | @smoke @critical @contract @auth | Core happy path; criticality 5, stable contract, deterministic |
 | TC-002 Successful login response matches the documented schema | AUTOMATE_API | @regression @contract @auth | Contract guard; cheap, deterministic |
-| TC-003 Session token is accepted by an authenticated endpoint | AUTOMATE_API | @smoke @regression @integration @auth | Proves login works end-to-end; criticality 5 |
+| TC-003 Successful login grants access to authenticated resources | AUTOMATE_API | @smoke @regression @integration @auth | Proves login works end-to-end (header-based auth); criticality 5 |
 | TC-004 Repeated valid logins behave consistently | AUTOMATE_API | @regression @auth @integration | Reliability signal; low cost within rate budget |
 | TC-005 Non-existent username returns 400 without a token | AUTOMATE_API | @regression @negative @auth | Stateless, synthetic data, zero account risk |
 | TC-006 Wrong password then recovery login (atomic) | AUTOMATE_API | @regression @negative @security @auth | Criticality 4; safe only as the designed atomic unit with recovery + abort guard |
@@ -37,10 +37,11 @@ configuration-supplied credentials.
 | TC-021 Account suspension after 3 consecutive failures | MANUAL_OBSERVABILITY | @wip @negative @security @auth | Destructive to shared account state; suspends the account the whole suite depends on — documented, verified at most once manually |
 | TC-022 IP block after >25 attempts/minute | MANUAL_OBSERVABILITY | @wip @negative @performance @auth | Destructive to shared IP; the suite respects the limit by design instead of testing it |
 | TC-023 Session token expires after ~6 hours | DEFER_INTEGRATION | @wip @auth @integration | Not verifiable in blackbox regression (no time control; 6 h wait impractical); revisit as a nightly long-running check |
+| TC-024 Login establishes a session cookie usable for cookie-based auth | AUTOMATE_API | @regression @auth | Split out of TC-003; the docs document cookie auth as an explicit alternative to the header |
 
 ## Summary
 
-- **AUTOMATE_API**: 20 tests (regression suite; 3 also in @smoke, 1 @critical)
+- **AUTOMATE_API**: 21 tests (regression suite; 3 also in @smoke, 1 @critical)
 - **AUTOMATE_UNIT**: 0 tests (blackbox — no isolated logic seam exists)
 - **DEFER_INTEGRATION**: 1 test (session expiry — needs a practical verification path)
 - **MANUAL_OBSERVABILITY**: 2 tests (suspension, IP block — destructive to shared state by definition)

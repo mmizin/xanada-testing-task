@@ -41,6 +41,7 @@ markers = [
     "edge_case: edge case tests",
     "slow: slow running tests",
     "login: login endpoint tests",
+    "integration: cross-endpoint integration tests",
 ]
 
 [tool.coverage.run]

@@ -147,18 +147,22 @@ is the caller's own profile data returned after successful authentication.
 
 ----
 
-## TC-003: Session token is accepted by an authenticated endpoint
+## TC-003: Successful login grants access to authenticated resources
 
 **Tags:** @smoke @regression @integration @auth
 **Technique:** Use Case Testing (main flow end-to-end) — FR-1.3
 **Isolation:** session-state
+**Location:** `tests/authentication/integration/` — cross-endpoint (login +
+session-status check), unlike the single-endpoint `behavior/`/`contract/` cases.
 
 **Pre-conditions:**
 - A session token obtained via a successful login within its ~6 h validity.
 
 **Request:**
 - **Method:** GET
-- **Path:** a lightweight authenticated endpoint (e.g. current-account/session info)
+- **Path:** `/bpapi/rest/security/session` (same session resource as login;
+  documented as "validate a session is still active" — 200 if valid/active,
+  401 if expired)
 - **Headers:** `session-token: <token from login>`
 
 **Expected Response:**
@@ -166,7 +170,23 @@ is the caller's own profile data returned after successful authentication.
 - **Assertions:**
   - Authenticated request succeeds with the token — proves login *works*, not
     merely *responds*.
-  - The same request without the token returns 401/403 (control assertion).
+  - The same request from a genuinely unauthenticated session returns 401
+    (control assertion, per the documented contract).
+
+**Scope note:** cookie-based auth (the API also accepts a `session-token`
+cookie, not just the header) is covered separately in TC-024, not here — this
+case is deliberately limited to the token/header flow.
+
+**Isolation pitfall (found while implementing):** the control request must
+use a separate client (`anonymous_auth_client` fixture), not the one that
+just logged in — httpx.Client persists cookies across every request on the
+same instance, so reusing it would authenticate via the leaked cookie and
+pass even with no explicit header.
+
+**Unconfirmed contract detail:** the docs state "A 401 response means that
+the session has expired," which is taken to imply "no session at all" also
+yields 401 — not stated explicitly. To be confirmed on the first live run,
+same caveat as already noted for TC-002/TC-012's exact status codes.
 
 **Test Data Setup:**
 - "A fresh session token" → resolved by the login flow at runtime.
@@ -527,3 +547,42 @@ documented as a manual, one-off observation only.
 wall-clock wait is impractical in regression. Deferred until a practical
 verification path exists (e.g. a long-running nightly job); token *validity* is
 covered by TC-003.
+
+----
+
+## TC-024: Login establishes a session cookie usable for cookie-based authentication
+
+**Tags:** @regression @auth
+**Technique:** Use Case Testing (documented alternate auth path) — FR-1.3
+**Isolation:** session-state
+**Location:** `tests/authentication/integration/` — split out of TC-003, which
+covers header-based auth only; this one is transport/session-state behavior,
+not the core login contract.
+
+**Pre-conditions:**
+- Valid credentials available; account not suspended.
+
+**Request:**
+1. `POST /bpapi/rest/security/session` with valid credentials (as TC-001).
+2. `GET /bpapi/rest/security/session` on the *same client*, with no explicit
+   `session-token` header — relying entirely on the cookie jar populated by
+   step 1.
+
+**Expected Response:**
+- **Assertions:**
+  - The login response (step 1) sets a `session-token` cookie.
+  - The client's cookie jar reflects it after login.
+  - Step 2 succeeds (200) on the cookie alone — proves the documented
+    "cookie *or* header" contract actually works, not just that a cookie
+    happens to be present.
+
+**Observed detail:** the real login response sets *two* `session-token`
+cookies scoped to different domains (`api.matchbook.com` and
+`.matchbook.com`). httpx's `Cookies.get()`/`__contains__`/`dict()` raise
+`CookieConflict` in that situation (same-name cookies across domains can't be
+disambiguated) — existence checks go through the jar directly
+(`ApiHttpClient.cookie_names` / `ApiResponse.cookie_names` in
+`src/infra/api/http_client.py`), not through httpx's ambiguous lookup API.
+
+**Test Data Setup:**
+- "Valid credentials" → from configuration.

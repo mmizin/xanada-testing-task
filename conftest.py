@@ -16,11 +16,11 @@ from filelock import FileLock
 from src.infra.config import Settings
 
 # Feature/infra fixture modules registered as plugins so their fixtures
-# (http_client, login_client) are discoverable across the whole test session,
+# (http_client, auth_client) are discoverable across the whole test session,
 # even though they live outside the tests/ tree that pytest walks for conftest.py.
 pytest_plugins = [
     "src.fixtures.http_client",
-    "src.features.authentication.fixtures.login_client",
+    "src.features.authentication.fixtures.authentication",
 ]
 
 
