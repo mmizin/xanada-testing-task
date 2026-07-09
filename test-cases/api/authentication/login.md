@@ -71,6 +71,77 @@
     verified run and documented alongside this spec).
   - No undocumented sensitive fields (e.g. password hash) in the body.
 
+**Observed contract** (first verified run, 2026-07-09, against the real
+account; modeled in `src/features/authentication/models/login_response.py` as
+`LoginResponse` with `extra="forbid"` on every nested object, so any field
+added later fails this test until the model is updated deliberately). The
+real `account` object is considerably larger than the docs' abbreviated
+sample — it's a full account/KYC/marketing-preferences snapshot, not just the
+handful of fields the docs show:
+```json
+{
+  "session-token": "<string>",
+  "user-id": "<int>",
+  "role": "<string>",
+  "account": {
+    "id": "<int>",
+    "user-id": "<int>",
+    "name": { "first": "<string>", "last": "<string>", "title-id": "<string>", "title": "<string>" },
+    "date-of-birth": "<ISO 8601 datetime>",
+    "email": "<string>",
+    "phone-number": "<string>",
+    "username": "<string>",
+    "balance": "<float>", "free-funds": "<float>", "exposure": "<float>", "commission-credit": "<float>",
+    "status": "<string>", "cashier-status": "<string>", "casino-status": "<string>", "virtuals-status": "<string>",
+    "language-id": "<int>", "language": "<string>",
+    "address": {
+      "address-id": "<int>",
+      "address-line-1": "<string>",
+      "address-line-2": "<string>",
+      "region-name": "<string>",
+      "country": { "country-id": "<int>", "name": "<string>", "country-code": "<string>" },
+      "post-code": "<string, may be empty>"
+    },
+    "currency-id": "<int>", "currency": "<string>",
+    "odds-type-id": "<string>", "odds-type": "<string>",
+    "bet-confirmation": "<bool>", "display-p-and-l": "<bool>",
+    "exchange-type-id": "<string>", "exchange-type": "<string>",
+    "odds-rounding": "<bool>",
+    "bonus-code": "<string>", "deposit-terms": "<string>",
+    "user-security-question": {
+      "user-security-question-id": "<int>",
+      "question": { "security-question-id": "<int>", "security-question": "<string>" }
+    },
+    "mfa-enabled": "<bool>",
+    "last-login": "<ISO 8601 datetime>",
+    "registration-time": "<ISO 8601 datetime>",
+    "bet-slip-pinned": "<bool>",
+    "marketing-consent": "<bool>",
+    "affordability-info-provided": "<bool>",
+    "proof-of-address-status": "<string>",
+    "proof-of-identity-status": "<string>",
+    "edd-status": "<string>",
+    "responsible-gambling-interaction": "<string>",
+    "registration-vertical": "<string>",
+    "segment-category": "<string>",
+    "marketing-preferences": {
+      "product-casino-consent": "<bool>", "product-exchange-consent": "<bool>",
+      "email-consent": "<bool>", "sms-consent": "<bool>",
+      "consents-updated-at": "<ISO 8601 datetime>", "consents-update-required": "<bool>"
+    },
+    "show-transactions-history-reminder": "<bool>",
+    "terms-and-conditions-accepted": "<bool>"
+  },
+  "last-login": "<ISO 8601 datetime>"
+}
+```
+Security review of this larger-than-documented body: no password, password
+hash, or other credential material appears anywhere. `account.user-security-
+question` exposes only the security *question* text (e.g. "Your favourite
+holiday destination?"), never an answer — confirmed from a real response, not
+just inferred from a field name. Not a security finding; the account snapshot
+is the caller's own profile data returned after successful authentication.
+
 **Test Data Setup:**
 - "Valid credentials" → from configuration.
 
