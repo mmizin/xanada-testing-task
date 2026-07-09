@@ -14,6 +14,7 @@ import pytest
 from filelock import FileLock
 
 from src.infra.config import Settings
+from src.infra.rate_limiter import CrossProcessRateLimiter
 
 # Feature/infra fixture modules registered as plugins so their fixtures
 # (http_client, auth_client) are discoverable across the whole test session,
@@ -48,3 +49,19 @@ def settings(tmp_path_factory: pytest.TempPathFactory, worker_id: str) -> Settin
             data = dataclasses.asdict(Settings.load())
             cache_file.write_text(json.dumps(data))
     return Settings(**data)
+
+
+@pytest.fixture(scope="session")
+def rate_limiter(settings: Settings) -> CrossProcessRateLimiter | None:
+    """The shared limiter instance (ADR-004), or ``None`` when disabled.
+
+    Session-scoped for cheapness only — coordination itself lives in the
+    on-disk state file, not in this object, so a fresh instance per test
+    would behave identically.
+    """
+    if not settings.rate_limit_enabled:
+        return None
+    return CrossProcessRateLimiter(
+        key=settings.base_url,
+        max_per_minute=settings.rate_limit_max_per_minute,
+    )

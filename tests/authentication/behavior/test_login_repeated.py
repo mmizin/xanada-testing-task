@@ -19,6 +19,8 @@ undocumented question the docs don't address).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import allure
 import pytest
 
@@ -28,22 +30,30 @@ from src.infra.api.http_client import ApiHttpClient
 from src.infra.config import Settings
 
 
-def _login_from_clean_client(settings: Settings, label: str) -> LoginResponse:
+def _login_from_clean_client(
+    settings: Settings, http_client_factory: Callable[[], ApiHttpClient], label: str
+) -> LoginResponse:
     """Log in on a brand-new client and return the validated response.
 
     Shared by both logins below so each gets its own fresh ``httpx.Client``
     (see the module docstring for why that isolation matters), without
-    duplicating the status/schema checks for each one. A raw
+    duplicating the status/schema checks for each one. Built via
+    ``http_client_factory`` (not a raw ``ApiHttpClient(...)`` call) so this
+    fresh cookie jar still shares the suite's rate limiter (ADR-004). A raw
     ``ValidationError`` (unhandled) already fails the test with pydantic's
     own diagnostics, including which field/type didn't match — no need to
     re-wrap it.
     """
-    with ApiHttpClient(base_url=settings.base_url) as http_client:
+    with http_client_factory() as http_client:
         client = AuthenticationApiClient(http_client)
         response = client.login(settings.username, settings.password)
 
-    allure.attach(str(response), name=f"{label} response", attachment_type=allure.attachment_type.TEXT)
-    assert response.status_code == 200, f"expected 200, got {response.status_code}: {response.raw.text}"
+    allure.attach(
+        str(response), name=f"{label} response", attachment_type=allure.attachment_type.TEXT
+    )
+    assert (
+        response.status_code == 200
+    ), f"expected 200, got {response.status_code}: {response.raw.text}"
 
     return LoginResponse.model_validate(response.data)
 
@@ -58,12 +68,14 @@ def _login_from_clean_client(settings: Settings, label: str) -> LoginResponse:
 @allure.tag("regression", "auth")
 @pytest.mark.positive
 @pytest.mark.login
-def test_repeated_valid_logins_are_consistent(settings: Settings) -> None:
+def test_repeated_valid_logins_are_consistent(
+    settings: Settings, http_client_factory: Callable[[], ApiHttpClient]
+) -> None:
     with allure.step("First login (clean client)"):
-        first = _login_from_clean_client(settings, "First")
+        first = _login_from_clean_client(settings, http_client_factory, "First")
 
     with allure.step("Second login (separate clean client)"):
-        second = _login_from_clean_client(settings, "Second")
+        second = _login_from_clean_client(settings, http_client_factory, "Second")
 
     with allure.step("Record (not assert) token reuse semantics"):
         # Whether a second login reissues the same token or mints a new one is

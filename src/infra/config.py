@@ -17,6 +17,13 @@ from dotenv import load_dotenv
 # default since it isn't secret, but still overridable for a staging target.
 _DEFAULT_BASE_URL = "https://api.matchbook.com"
 
+# Default request budget for the cross-process rate limiter (ADR-004),
+# deliberately below the documented 25/minute IP-block threshold: the real
+# API's Cloudflare layer enforces a stricter burst limit than the account-
+# level rule (observed: 20 requests in ~4s was enough to trigger it), so
+# 20/minute — spacing requests 3s apart — leaves headroom under both.
+_DEFAULT_RATE_LIMIT_MAX_PER_MINUTE = 20.0
+
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -25,6 +32,8 @@ class Settings:
     base_url: str
     username: str
     password: str
+    rate_limit_enabled: bool
+    rate_limit_max_per_minute: float
 
     @classmethod
     def load(cls) -> "Settings":
@@ -57,7 +66,33 @@ class Settings:
                 "local .env file (see .env.example)."
             )
 
-        return cls(base_url=base_url, username=username, password=password)
+        rate_limit_enabled = os.environ.get("RATE_LIMIT_ENABLED", "true").strip().lower() not in (
+            "0",
+            "false",
+            "no",
+        )
+
+        raw_rate_limit = os.environ.get(
+            "RATE_LIMIT_MAX_PER_MINUTE", str(_DEFAULT_RATE_LIMIT_MAX_PER_MINUTE)
+        )
+        try:
+            rate_limit_max_per_minute = float(raw_rate_limit)
+        except ValueError:
+            raise RuntimeError(
+                f"Invalid RATE_LIMIT_MAX_PER_MINUTE={raw_rate_limit!r}: must be a number."
+            ) from None
+        if rate_limit_max_per_minute <= 0:
+            raise RuntimeError(
+                f"Invalid RATE_LIMIT_MAX_PER_MINUTE={raw_rate_limit!r}: must be positive."
+            )
+
+        return cls(
+            base_url=base_url,
+            username=username,
+            password=password,
+            rate_limit_enabled=rate_limit_enabled,
+            rate_limit_max_per_minute=rate_limit_max_per_minute,
+        )
 
     def __repr__(self) -> str:
         # Defensive redaction (Architecture Design §9): even though nothing

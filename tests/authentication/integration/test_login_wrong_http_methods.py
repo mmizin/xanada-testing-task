@@ -65,7 +65,9 @@ AUTHENTICATED_METHOD_VARIANTS: list[tuple[str, Callable[[ApiHttpClient, str], Ap
 
 
 @pytest.fixture()
-def valid_session_token(settings: Settings) -> str:
+def valid_session_token(
+    settings: Settings, http_client_factory: Callable[[], ApiHttpClient]
+) -> str:
     """Log in and return a valid session token for one test.
 
     Function-scoped, so each parametrized variant (PUT, PATCH) logs in for
@@ -75,9 +77,10 @@ def valid_session_token(settings: Settings) -> str:
     conftest, and that machinery isn't worth building just to save one login
     call. Two logins are two more legitimate, successful requests, nowhere
     near the 25/minute IP budget (PRD-001 §"Critical constraints") or the
-    account's failure-strike limit (this never fails).
+    account's failure-strike limit (this never fails) — and both are still
+    paced by the shared rate limiter (ADR-004) via ``http_client_factory``.
     """
-    with ApiHttpClient(base_url=settings.base_url) as login_client:
+    with http_client_factory() as login_client:
         login_response = AuthenticationApiClient(login_client).login(
             settings.username, settings.password
         )
@@ -106,7 +109,7 @@ def valid_session_token(settings: Settings) -> str:
     ids=[name for name, _ in AUTHENTICATED_METHOD_VARIANTS],
 )
 def test_wrong_http_method_with_valid_session_returns_405(
-    settings: Settings,
+    http_client_factory: Callable[[], ApiHttpClient],
     valid_session_token: str,
     method_name: str,
     send_authenticated_request: Callable[[ApiHttpClient, str], ApiResponse],
@@ -116,8 +119,9 @@ def test_wrong_http_method_with_valid_session_returns_405(
     with allure.step(f"Send a header-authenticated {method_name} via a cookie-free client"):
         # A fresh instance per call, isolated from the login above and from
         # the other parametrized variant — see the module docstring's
-        # "Authentication-source isolation".
-        with ApiHttpClient(base_url=settings.base_url) as cookie_free_client:
+        # "Authentication-source isolation". Built via http_client_factory so
+        # this fresh cookie jar still shares the rate limiter (ADR-004).
+        with http_client_factory() as cookie_free_client:
             response = send_authenticated_request(cookie_free_client, valid_session_token)
         allure.attach(str(response), name="Response", attachment_type=allure.attachment_type.TEXT)
 
