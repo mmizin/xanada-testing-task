@@ -23,9 +23,7 @@ from src.features.authentication.utils.assertions import assert_no_sensitive_val
 from src.features.authentication.utils.session import extract_session_token
 from src.utils.data_generators import VALID_FORMAT_PASSWORD, non_existent_username
 
-# Each entry: (case label, username suffix). The synthetic-unique prefix from
-# non_existent_username() is kept so the whole value stays guaranteed unused,
-# with the unicode/special content appended to actually exercise encoding.
+# Append unicode/special chars to synthetic usernames to exercise encoding.
 UNICODE_CASES: list[tuple[str, str]] = [
     ("CJK characters", "-你好世界"),  # 你好世界
     ("emoji", "-\U0001f600\U0001f680"),  # 😀🚀

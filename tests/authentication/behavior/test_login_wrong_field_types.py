@@ -20,9 +20,7 @@ from src.features.authentication.utils.assertions import assert_no_sensitive_val
 from src.features.authentication.utils.session import extract_session_token
 from src.utils.data_generators import VALID_FORMAT_PASSWORD, non_existent_username
 
-# Each entry: (case label, username, password). One field is deliberately
-# wrong-typed per variant so a failure clearly implicates that field, not an
-# interaction between two wrong types at once.
+# One field wrong-typed per variant for failure isolation.
 WRONG_TYPE_CASES: list[tuple[str, Any, Any]] = [
     ("username as number", 12345, VALID_FORMAT_PASSWORD),
     ("username as object", {"nested": "value"}, VALID_FORMAT_PASSWORD),
@@ -63,8 +61,6 @@ def test_login_with_wrong_field_types(
         assert (
             extract_session_token(response) is None
         ), f"expected no session-token for {case_label}: {response.raw.text}"
-        # Only string field values are meaningful to check for an echo —
-        # a number/object/array password never round-trips as the literal
-        # sensitive string a real password would be.
+        # Only string passwords can leak as-is; non-strings never round-trip literally.
         if isinstance(password, str):
             assert_no_sensitive_values_leaked(response, password)

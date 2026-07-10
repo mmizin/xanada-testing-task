@@ -42,9 +42,7 @@ from src.features.authentication.api.authentication_client import (
 )
 from src.infra.api.http_client import ApiResponse
 
-# Each entry: (method name, request callable), sent straight through
-# ApiHttpClient since neither method is a legitimate AuthenticationApiClient
-# operation.
+# Sent via ApiHttpClient directly; neither method is a feature-client operation.
 METHOD_VARIANTS: list[tuple[str, Callable[[AuthenticationApiClient], ApiResponse]]] = [
     ("PUT", lambda client: client.http_client.put(SESSION_PATH)),
     ("PATCH", lambda client: client.http_client.patch(SESSION_PATH)),
@@ -77,9 +75,7 @@ def test_wrong_http_method_on_session_url(
         allure.attach(str(response), name="Response", attachment_type=allure.attachment_type.TEXT)
 
     with allure.step("Assert 401 (observed live behavior, not the spec's guessed 405)"):
-        # Confirmed by running against the real endpoint: an unauthenticated
-        # request to this resource returns 401 regardless of method — see the
-        # module docstring's "Observed contract detail".
+        # Confirmed against live API: unauthenticated requests return 401 regardless of method.
         assert (
             response.status_code == 401
         ), f"expected 401 for {method_name}, got {response.status_code}: {response.raw.text}"

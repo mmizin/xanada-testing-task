@@ -48,9 +48,7 @@ class CrossProcessRateLimiter:
             raise ValueError(f"max_per_minute must be positive, got {max_per_minute}")
         self._min_interval_seconds = 60.0 / max_per_minute
 
-        # Keyed by a digest of `key` (e.g. the base URL) rather than `key`
-        # itself, so an arbitrary key never has to double as a filesystem-safe
-        # filename.
+        # Use digest as filename to avoid filesystem safety issues.
         digest = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
         base_dir = Path(state_dir) if state_dir is not None else Path(tempfile.gettempdir())
         self._state_path = base_dir / f"matchbook-rate-limiter-{digest}.state"

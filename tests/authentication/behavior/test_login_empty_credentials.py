@@ -19,10 +19,7 @@ from src.features.authentication.utils.assertions import assert_no_sensitive_val
 from src.features.authentication.utils.session import extract_session_token
 from src.utils.data_generators import VALID_FORMAT_PASSWORD, non_existent_username
 
-# Each entry: (case label, username, password). Built as a plain list of
-# concrete values (not a lambda factory like TC-007/008/009) since none of
-# these variants need a fresh synthetic username per-call for correctness —
-# an empty string can't collide with anything, real or synthetic.
+# Concrete values (not lambdas) since empty strings can't collide with anything.
 EMPTY_CREDENTIAL_CASES: list[tuple[str, str, str]] = [
     ("empty username", "", VALID_FORMAT_PASSWORD),
     ("empty password", non_existent_username(), ""),

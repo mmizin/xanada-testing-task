@@ -24,10 +24,7 @@ from src.features.authentication.utils.session import extract_session_token
 from src.infra.api.http_client import DEFAULT_TIMEOUT
 from src.utils.data_generators import VALID_FORMAT_PASSWORD, non_existent_username
 
-# Each entry: (case label, username, password). "Large" and "very large"
-# are distinct partitions in their own right (BVA doesn't stop at one
-# extreme) — a validator with an off silent cutoff might reject one length
-# and 500 on the other.
+# Test multiple length boundaries (BVA): same validator may handle different lengths differently.
 LONG_CREDENTIAL_CASES: list[tuple[str, str, str]] = [
     ("username ~1,000 chars", f"{non_existent_username()}{'a' * 1000}", VALID_FORMAT_PASSWORD),
     ("username ~10,000 chars", f"{non_existent_username()}{'a' * 10_000}", VALID_FORMAT_PASSWORD),
@@ -35,10 +32,7 @@ LONG_CREDENTIAL_CASES: list[tuple[str, str, str]] = [
     ("password ~10,000 chars", non_existent_username(), "p" * 10_000),
 ]
 
-# The read timeout is the hard ceiling below which a response must arrive
-# (ADR-002: fail-fast, no indefinite blocking); asserting comfortably under
-# it documents that long input doesn't measurably degrade the endpoint,
-# not just that it eventually responds before the client gives up.
+# Asserting well under the read timeout documents no degradation from long input.
 _TIMEOUT_BUDGET_MS = DEFAULT_TIMEOUT.read * 1000 if DEFAULT_TIMEOUT.read else None
 
 

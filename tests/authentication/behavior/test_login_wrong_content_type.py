@@ -42,10 +42,7 @@ def test_login_with_wrong_content_type(anonymous_auth_client: AuthenticationApiC
         allure.attach(str(response), name="Response", attachment_type=allure.attachment_type.TEXT)
 
     with allure.step("Assert 400 or 415, never 5xx"):
-        # Spec leaves the exact code open (400 or 415) — unlike TC-010/TC-011,
-        # which name a single confirmed code — since Content-Type rejection is
-        # commonly implemented as either "reject at the framework/media-type
-        # layer" (415) or "reject at the login validator" (400).
+        # Spec allows either code: 415 (framework/media-type) or 400 (validator).
         assert response.status_code in (
             400,
             415,

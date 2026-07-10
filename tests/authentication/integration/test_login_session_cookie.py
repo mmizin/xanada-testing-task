@@ -34,8 +34,7 @@ def test_login_establishes_session_cookie(
         ), f"expected 200, got {login_response.status_code}: {login_response.raw.text}"
 
     with allure.step("Assert the login response itself sets a session-token cookie"):
-        # The docs state the token can be sent back as *either* a session-token
-        # cookie or header — this is documented contract, not incidental behavior.
+        # Per docs: token can be sent as cookie or header (documented contract).
         assert "session-token" in login_response.cookie_names, (
             "expected the login response to Set-Cookie a session-token, "
             f"got: {login_response.cookie_names}"
@@ -46,10 +45,7 @@ def test_login_establishes_session_cookie(
         )
 
     with allure.step("Assert the cookie alone authenticates a session-status check"):
-        # No token passed here: this call rides on the cookie the login above
-        # already stored on auth_client's shared httpx.Client, proving the
-        # documented cookie-based auth path actually works, not just that a
-        # cookie happens to be present.
+        # No token passed: call rides on stored cookie, proving documented cookie-based auth works.
         cookie_authenticated_response = auth_client.get_session()
         allure.attach(
             str(cookie_authenticated_response),

@@ -55,9 +55,7 @@ from src.features.authentication.utils.session import extract_session_token
 from src.infra.api.http_client import ApiHttpClient, ApiResponse
 from src.infra.config import Settings
 
-# Each entry: (method name, request callable) against a plain ApiHttpClient
-# carrying only the explicit session-token header — no feature-client method
-# wraps PUT/PATCH here, same reasoning as the unauthenticated variant.
+# Via ApiHttpClient with explicit session-token header; no feature-client wrapper.
 AUTHENTICATED_METHOD_VARIANTS: list[tuple[str, Callable[[ApiHttpClient, str], ApiResponse]]] = [
     ("PUT", lambda client, token: client.put(SESSION_PATH, headers={"session-token": token})),
     ("PATCH", lambda client, token: client.patch(SESSION_PATH, headers={"session-token": token})),
@@ -70,15 +68,8 @@ def valid_session_token(
 ) -> str:
     """Log in and return a valid session token for one test.
 
-    Function-scoped, so each parametrized variant (PUT, PATCH) logs in for
-    itself — deliberately not sharing one token across both via a wider
-    scope: getting real once-per-suite sharing under pytest-xdist would need
-    the same cross-process file-lock cache ``settings`` uses in the root
-    conftest, and that machinery isn't worth building just to save one login
-    call. Two logins are two more legitimate, successful requests, nowhere
-    near the 25/minute IP budget (PRD-001 §"Critical constraints") or the
-    account's failure-strike limit (this never fails) — and both are still
-    paced by the shared rate limiter (ADR-004) via ``http_client_factory``.
+    Function-scoped: each parametrized variant logs in separately.
+    Cost is minimal and paced by the shared rate limiter (ADR-004).
     """
     with http_client_factory() as login_client:
         login_response = AuthenticationApiClient(login_client).login(
@@ -117,18 +108,13 @@ def test_wrong_http_method_with_valid_session_returns_405(
     allure.dynamic.title(f"Authenticated {method_name} on the session URL returns 405")
 
     with allure.step(f"Send a header-authenticated {method_name} via a cookie-free client"):
-        # A fresh instance per call, isolated from the login above and from
-        # the other parametrized variant — see the module docstring's
-        # "Authentication-source isolation". Built via http_client_factory so
-        # this fresh cookie jar still shares the rate limiter (ADR-004).
+        # Fresh cookie-free client isolates auth source; still shares rate limiter (ADR-004).
         with http_client_factory() as cookie_free_client:
             response = send_authenticated_request(cookie_free_client, valid_session_token)
         allure.attach(str(response), name="Response", attachment_type=allure.attachment_type.TEXT)
 
     with allure.step("Assert 405 Method Not Allowed"):
-        # With a valid token and no possible cookie carryover, the only
-        # reason left for rejection is the method itself — this proves
-        # method rejection, not authentication (see module docstring).
+        # Valid token + no cookies = method rejection only, not auth issues.
         assert response.status_code == 405, (
             f"expected 405 for authenticated {method_name}, got "
             f"{response.status_code}: {response.raw.text}"

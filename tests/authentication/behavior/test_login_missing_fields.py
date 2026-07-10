@@ -24,10 +24,7 @@ from src.features.authentication.utils.assertions import assert_no_sensitive_val
 from src.features.authentication.utils.session import extract_session_token
 from src.utils.data_generators import VALID_FORMAT_PASSWORD, non_existent_username
 
-# Each entry: (Allure test-case ID, human-readable case label, kwargs builder).
-# Builders are called fresh per test invocation (not at collection time) so a
-# non-existent username is minted once per actual login attempt, not reused
-# across parametrize cases or xdist workers.
+# Builders called fresh per test (not collection time) so synthetic usernames aren't reused.
 FIELD_PRESENCE_CASES: list[tuple[str, str, Callable[[], dict[str, str | None]]]] = [
     (
         "TC-007",

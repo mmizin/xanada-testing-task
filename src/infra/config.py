@@ -13,15 +13,11 @@ from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
-# Matchbook's own base URL (PRD-001 §"Endpoint under test") — a sensible
-# default since it isn't secret, but still overridable for a staging target.
+# Production API base URL, overridable for staging.
 _DEFAULT_BASE_URL = "https://api.matchbook.com"
 
-# Default request budget for the cross-process rate limiter (ADR-004),
-# deliberately below the documented 25/minute IP-block threshold: the real
-# API's Cloudflare layer enforces a stricter burst limit than the account-
-# level rule (observed: 20 requests in ~4s was enough to trigger it), so
-# 20/minute — spacing requests 3s apart — leaves headroom under both.
+# 20/min budget leaves headroom under both account-level (25/min) and stricter
+# Cloudflare burst limits (observed: 20 req in ~4s triggers block).
 _DEFAULT_RATE_LIMIT_MAX_PER_MINUTE = 20.0
 
 
@@ -95,7 +91,5 @@ class Settings:
         )
 
     def __repr__(self) -> str:
-        # Defensive redaction (Architecture Design §9): even though nothing
-        # currently logs a Settings instance, this ensures a stray print/log
-        # or Allure attachment can never leak the password.
+        # Always redact password to prevent accidental leaks.
         return f"Settings(base_url={self.base_url!r}, username={self.username!r}, password='***')"

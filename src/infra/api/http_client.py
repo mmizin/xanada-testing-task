@@ -51,19 +51,15 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# Explicit, fail-fast timeouts (ADR-002): a hung request must not stall a
-# rate-budgeted run. No phase is allowed to block indefinitely.
+# Explicit fail-fast timeouts to prevent stalling a rate-budgeted run.
 DEFAULT_TIMEOUT = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
 
 
 def cookie_names(cookies: httpx.Cookies) -> set[str]:
     """Names of cookies in a jar, safe against same-name/different-domain conflicts.
 
-    Observed on the real login response: Matchbook sets *two* ``session-token``
-    cookies scoped to different domains (``api.matchbook.com`` and
-    ``.matchbook.com``). httpx.Cookies.get()/``__contains__``/``dict()`` all
-    raise ``CookieConflict`` in that situation since they can't disambiguate
-    by name alone — existence-only checks must go through the jar directly.
+    Matchbook sets multiple session-token cookies on different domains; httpx.Cookies
+    methods raise CookieConflict when disambiguating by name alone, so iterate the jar directly.
     """
     return {cookie.name for cookie in cookies.jar}
 
@@ -72,10 +68,7 @@ def cookie_names(cookies: httpx.Cookies) -> set[str]:
 class ApiResponse:
     """Evidence-friendly envelope around an httpx response.
 
-    ``raw`` keeps the untouched httpx.Response for callers that need headers,
-    cookies, or anything else; ``data``/``elapsed_ms`` exist because every test
-    wants parsed JSON and timing, and NFR-5 wants that evidence captured once,
-    centrally, rather than recomputed per test.
+    ``raw`` for full response access; ``data``/``elapsed_ms`` captured once for all tests.
     """
 
     status_code: int
@@ -93,11 +86,9 @@ class ApiResponse:
 
     @property
     def request_headers(self) -> dict[str, str]:
-        """The headers actually sent on the wire, including any cookie header
-        httpx added from its cookie jar. Exists so tests can assert on real
-        outgoing auth state (e.g. "no session-token header or cookie was
-        sent") instead of only on the response — see ``ApiHttpClient``'s
-        docstring on cookie persistence.
+        """Headers sent on the wire, including httpx-added cookies.
+
+        Allows asserting on outgoing auth state, not just response data.
         """
         return dict(self.raw.request.headers)
 
@@ -118,9 +109,7 @@ class ApiHttpClient:
         event_hooks: dict[str, list] | None = None,
         headers: dict[str, str] | None = None,
     ) -> None:
-        # event_hooks defaults to empty lists (not None) so callers can attach
-        # rate-limiting/evidence-capture hooks later via `.event_hooks["request"].append(...)`
-        # without first checking whether the dict was initialized.
+        # event_hooks defaults to {} with empty lists, so callers can append hooks without checking initialization.
         self._client = httpx.Client(
             base_url=base_url,
             timeout=timeout,
@@ -132,11 +121,7 @@ class ApiHttpClient:
     def cookies(self) -> httpx.Cookies:
         """The underlying client's cookie jar.
 
-        Read-only introspection, not a way to clear/mutate it mid-test:
-        isolation is "construct a new ``ApiHttpClient``", never "reset this
-        one's cookies" (see the class docstring's cookie-behavior note). This
-        exists so tests can *prove* auth-state isolation between two client
-        instances instead of assuming it from the code.
+        Read-only; isolation is via new ``ApiHttpClient`` instances, not cookie resets.
         """
         return self._client.cookies
 

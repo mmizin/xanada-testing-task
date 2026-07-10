@@ -51,19 +51,14 @@ def test_login_grants_access_to_authenticated_resources(
         )
 
     with allure.step("Control: an unauthenticated session is rejected"):
-        # A fresh anonymous_auth_client is required here, not auth_client: httpx.Client
-        # persists the Set-Cookie from the login above across every later request on
-        # that same instance, so reusing auth_client would authenticate via the leaked
-        # cookie and pass even if token-checking were broken (see TC-024).
+        # Fresh client to avoid cookie carryover from login that would authenticate via cookie.
         unauthenticated_response = anonymous_auth_client.get_session()
         allure.attach(
             str(unauthenticated_response),
             name="Unauthenticated response",
             attachment_type=allure.attachment_type.TEXT,
         )
-        # Per the docs: "A 401 response means that the session has expired" — taken
-        # as implying "no session" also yields 401. Unconfirmed against the live API
-        # until the first verified run (same caveat as TC-002/TC-012's exact codes).
+        # Per docs: "session expired" yields 401; assume no session also yields 401.
         assert unauthenticated_response.status_code == 401, (
             f"expected 401 without a token, got {unauthenticated_response.status_code}: "
             f"{unauthenticated_response.raw.text}"

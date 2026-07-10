@@ -23,10 +23,7 @@ from src.features.authentication.utils.assertions import assert_no_sensitive_val
 from src.features.authentication.utils.session import extract_session_token
 from src.utils.data_generators import VALID_FORMAT_PASSWORD, non_existent_username
 
-# Each entry: (case label, username, password). A payload is injected into
-# whichever field a real attacker would most plausibly target for that
-# style, keeping the other field a normal synthetic value so a failure
-# clearly implicates the injected field.
+# Payloads in target fields; other field holds synthetic value for failure isolation.
 INJECTION_CASES: list[tuple[str, str, str]] = [
     ("SQL tautology in username", "' OR '1'='1", VALID_FORMAT_PASSWORD),
     ("SQL comment-terminated username", "admin'--", VALID_FORMAT_PASSWORD),
@@ -37,10 +34,7 @@ INJECTION_CASES: list[tuple[str, str, str]] = [
     ("template injection in username", "{{7*7}}", VALID_FORMAT_PASSWORD),
 ]
 
-# Internals that must never appear in an error body regardless of which
-# payload triggered it — the negative-case counterpart to TC-019's
-# password-echo check, but for backend-implementation leakage rather than
-# credential leakage.
+# Backend internals that must never leak in error bodies.
 _INTERNAL_LEAK_MARKERS = (
     "Traceback",
     "SQLException",

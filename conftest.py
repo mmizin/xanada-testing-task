@@ -16,9 +16,7 @@ from filelock import FileLock
 from src.infra.config import Settings
 from src.infra.rate_limiter import CrossProcessRateLimiter
 
-# Feature/infra fixture modules registered as plugins so their fixtures
-# (http_client, auth_client) are discoverable across the whole test session,
-# even though they live outside the tests/ tree that pytest walks for conftest.py.
+# Fixtures live outside tests/ tree but must be discoverable via pytest_plugins.
 pytest_plugins = [
     "src.fixtures.http_client",
     "src.features.authentication.fixtures.authentication",

@@ -16,7 +16,7 @@ import pytest
 from src.features.authentication.api.authentication_client import AuthenticationApiClient
 from src.features.authentication.utils.session import extract_session_token
 
-# Deliberately truncated: a JSON object opened but never closed.
+# Truncated JSON to exercise syntax error handling.
 _TRUNCATED_JSON_BODY = '{"username": "x", '
 
 
@@ -44,9 +44,7 @@ def test_login_with_invalid_json(anonymous_auth_client: AuthenticationApiClient)
         assert (
             extract_session_token(response) is None
         ), f"expected no session-token for an invalid-JSON body: {response.raw.text}"
-        # A parser stack trace would necessarily mention the language/framework
-        # doing the parsing — a cheap, effective proxy for "internals leaked"
-        # without needing to enumerate every possible traceback format.
+        # Parser stack traces leak internals via language/framework names.
         lowered_body = response.raw.text.lower()
         for leak_marker in ("traceback", "stacktrace", "exception", "at com.", "at java.", "  at "):
             assert (

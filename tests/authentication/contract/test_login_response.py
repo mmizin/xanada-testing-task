@@ -36,6 +36,5 @@ def test_login_response_matches_documented_schema(
     with allure.step(
         "Assert the body has exactly the documented fields, correctly typed"
     ):
-        # An unhandled ValidationError already fails the test with pydantic's
-        # own diagnostics (which field/type didn't match) — no need to re-wrap it.
+        # Let pydantic's validation errors propagate; they include field/type details.
         LoginResponse.model_validate(response.data)

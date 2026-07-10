@@ -19,18 +19,11 @@ from src.infra.api.http_client import ApiHttpClient, ApiResponse
 
 SESSION_PATH = "/bpapi/rest/security/session"
 
-# Per the docs' sample requests: Login (POST) and Logout/Get Session use
-# different header sets (even "accept" differs — "*/*" vs "application/json").
-# There's no header genuinely common to every session operation, so nothing
-# is pushed down to ApiHttpClient as a suite-wide default (Architecture Design
-# §7: the HTTP client owns transport-level defaults; endpoint-specific headers
-# belong here, in the feature client).
+# Endpoint-specific headers; no common header across all session operations.
 _LOGIN_HEADERS = {"content-type": "application/json;charset=UTF-8", "accept": "*/*"}
 _SESSION_HEADERS = {"accept": "application/json", "User-Agent": "api-doc-test-client"}
 
-# Sentinel distinct from None: lets callers express "field omitted from the
-# body entirely" separately from "field explicitly set to null" — these are
-# different equivalence classes in the decision table (TD-001 §1, TC-007/008/009).
+# Sentinel to distinguish "omitted field" from "explicit null" (separate equivalence classes).
 _OMIT = object()
 
 
@@ -42,9 +35,7 @@ class AuthenticationApiClient:
 
     @property
     def http_client(self) -> ApiHttpClient:
-        """The underlying transport client, for tests that need to prove
-        auth-state isolation (e.g. cookie jar contents) rather than assume it.
-        """
+        """The underlying transport client; exposed for auth-state isolation verification."""
         return self._http
 
     def login(
@@ -77,13 +68,9 @@ class AuthenticationApiClient:
         headers: dict[str, str] | None = None,
         **httpx_kwargs: Any,
     ) -> ApiResponse:
-        """POST arbitrary raw content, bypassing JSON encoding entirely.
+        """POST raw content, bypassing JSON encoding.
 
-        Needed for cases httpx's ``json=`` helper can't produce by construction:
-        syntactically invalid JSON bodies (TC-010) and a wrong Content-Type header
-        wrapping an otherwise valid-shaped body (TC-012). Raw body or not, this is
-        still a login call, so the same default headers apply unless the caller
-        overrides them (TC-012 deliberately overrides Content-Type).
+        Needed for invalid JSON bodies and custom Content-Type headers.
         """
         merged_headers = _LOGIN_HEADERS | (headers or {})
         response = self._http.post(SESSION_PATH, content=content, headers=merged_headers, **httpx_kwargs)
@@ -95,12 +82,9 @@ class AuthenticationApiClient:
         session_token: Any = _OMIT,
         **httpx_kwargs: Any,
     ) -> ApiResponse:
-        """GET the current session's status.
+        """GET current session status.
 
-        Per the docs: 200 means the session is still valid/active; 401 means
-        it has expired. Proves a token issued by ``login()`` actually
-        authenticates something, using the same session resource rather than
-        reaching into an unrelated endpoint (TC-003).
+        200 = valid/active; 401 = expired. Proves issued tokens authenticate.
         """
         headers = dict(_SESSION_HEADERS)
         if session_token is not _OMIT:

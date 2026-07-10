@@ -78,11 +78,7 @@ def test_repeated_valid_logins_are_consistent(
         second = _login_from_clean_client(settings, http_client_factory, "Second")
 
     with allure.step("Record (not assert) token reuse semantics"):
-        # Whether a second login reissues the same token or mints a new one is
-        # an observed contract detail, not a documented guarantee (docs are
-        # silent on it) — recorded as evidence for whoever reads this run,
-        # not asserted one way or the other (FR-4.1 only requires consistency
-        # of status/schema, not a specific session-identity policy).
+        # Token reuse is undocumented; record as evidence but don't assert.
         allure.attach(
             f"same token reused: {first.session_token == second.session_token}",
             name="Token reuse observation",
