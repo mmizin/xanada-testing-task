@@ -1,4 +1,4 @@
-# Xanada Testing Task — Login Endpoint Regression Suite
+# Xanadu Testing Task — Login Endpoint Regression Suite
 
 Blackbox regression tests for the Matchbook [login endpoint](https://developers.matchbook.com/reference/login),
 written as a QA Automation Challenge (SDET position). The suite exercises
